@@ -8,31 +8,113 @@ engine = create_engine("sqlite:///tweeter.db")
 
 @tweeter.route("/")
 def index():
-    return render_template("index.html")
+
+    query = f"""
+    SELECT *
+    FROM follows f
+    INNER JOIN tweets t ON f.followee_id=t.user_id
+    INNER JOIN users u ON f.followee_id=u.id
+    WHERE f.follower_id={session["user_id"]}
+    """
+
+
+    with engine.connect() as connection:
+        tweets = connection.execute(query).fetchall()
+
+        return render_template("index.html", tweets=tweets)
 
 @tweeter.route("/register")
 def register():
-    pass
+    return render_template("register.html")
 
 @tweeter.route("/register", methods=["POST"])
 def handle_register():
-    pass
+    username = request.form["username"]
+    password = request.form["password"]
+    picture = request.form["picture"]
+
+    query = f"""
+    INSERT INTO users(username, password, picture)
+    VALUES ("{username}", "{password}", "{picture}")
+    """
+
+    user_query = f"""
+    SELECT id
+    FROM users
+    WHERE username='{username}'
+    """
+
+    with engine.connect() as connection:
+        connection.execute(query)
+        user = connection.execute(user_query).fetchone()
+
+        session["username"] = username
+        session["user_id"] = user[0]
+
+        return redirect(url_for("index"))
+
 
 @tweeter.route("/users")
 def users():
-    pass
+    query = f"""
+    SELECT *
+    FROM users
+    """
 
-@tweeter.route("/users/<user_id>")
-def user_detail(user_id):
-    pass
+    with engine.connect() as connection:
+        users = connection.execute(query).fetchall()
+
+        return render_template("users.html", users=users)
+
+@tweeter.route("/users/<username>")
+def user_detail(username):
+    user_query = f"""
+    SELECT *
+    FROM users
+    WHERE username='{username}'
+    """
+
+    tweets_query = f"""
+    SELECT *
+    FROM users u
+    INNER JOIN tweets t ON u.id=t.user_id
+    WHERE u.username='{username}'
+    """
+
+    with engine.connect() as connection:
+        user = connection.execute(user_query).fetchone()
+        tweets = connection.execute(tweets_query).fetchall()
+
+        return render_template(
+            "user_detail.html",
+            user=user,
+            tweets=tweets)
+
 
 @tweeter.route("/login")
 def login():
-    pass
+    return render_template("login.html")
 
 @tweeter.route("/login", methods=["POST"])
 def handle_login():
-    pass
+    username = request.form["username"]
+    password = request.form["password"]
+
+    query = f"""
+    SELECT id
+    FROM users
+    WHERE username='{username}'
+    AND password='{password}'
+    """
+
+    with engine.connect() as connection:
+        user = connection.execute(query).fetchone()
+
+        if user:
+            session["username"] = username
+            session["user_id"] = user[0]
+
+            return redirect(url_for("index"))
 
 @tweeter.route("/logout")
 def logout():
@@ -41,11 +123,32 @@ def logout():
 
 @tweeter.route("/tweet", methods=["POST"])
 def handle_tweet():
-    pass
+    tweet = request.form["tweet"]
+
+    query = f"""
+    INSERT INTO tweets(user_id, tweet)
+    VALUES ({session["user_id"]}, '{tweet}')
+    """
+
+    with engine.connect() as connection:
+        connection.execute(query)
+
+        return redirect(url_for("index"))
 
 @tweeter.route("/follow/<followee>")
 def follow(followee):
-    pass
+    if "user_id" in session:
+        query = f"""
+        INSERT INTO follows(follower_id, followee_id)
+        VALUES({session["user_id"]}, {followee})
+        """
+
+        with engine.connect() as connection:
+            connection.execute(query)
+
+            return redirect(url_for("index"))
+    else:
+        pass
 
 @tweeter.errorhandler(404)
 def page_not_found(e):

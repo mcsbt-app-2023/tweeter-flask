@@ -1,4 +1,12 @@
 {% extends "base.html" %}
 
 {% block main %}
+
+    {% for user in users %}
+        <div>
+            <img src="{{user[2]}}" alt="" class="profile">
+            <a href="/users/{{user[1]}}">{{user[1]}}</a>
+        </div>
+    {% endfor %}
+
 {% endblock %}
