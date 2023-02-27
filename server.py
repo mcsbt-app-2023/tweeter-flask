@@ -9,19 +9,22 @@ engine = create_engine("sqlite:///tweeter.db")
 @tweeter.route("/")
 def index():
 
-    query = f"""
-    SELECT *
-    FROM follows f
-    INNER JOIN tweets t ON f.followee_id=t.user_id
-    INNER JOIN users u ON f.followee_id=u.id
-    WHERE f.follower_id={session["user_id"]}
-    """
+    if "user_id" in session:
+        query = f"""
+        SELECT *
+        FROM follows f
+        INNER JOIN tweets t ON f.followee_id=t.user_id
+        INNER JOIN users u ON f.followee_id=u.id
+        WHERE f.follower_id={session["user_id"]}
+        """
 
 
-    with engine.connect() as connection:
-        tweets = connection.execute(query).fetchall()
+        with engine.connect() as connection:
+            tweets = connection.execute(query).fetchall()
 
-        return render_template("index.html", tweets=tweets)
+            return render_template("index.html", tweets=tweets)
+    else:
+        return render_template("index.html")
 
 @tweeter.route("/register")
 def register():
@@ -33,9 +36,11 @@ def handle_register():
     password = request.form["password"]
     picture = request.form["picture"]
 
+    hashed_password = generate_password_hash(password)
+
     query = f"""
     INSERT INTO users(username, password, picture)
-    VALUES ("{username}", "{password}", "{picture}")
+    VALUES ("{username}", "{hashed_password}", "{picture}")
     """
 
     user_query = f"""
@@ -101,16 +106,17 @@ def handle_login():
     password = request.form["password"]
 
     query = f"""
-    SELECT id
+    SELECT id, password
     FROM users
     WHERE username='{username}'
-    AND password='{password}'
     """
 
     with engine.connect() as connection:
         user = connection.execute(query).fetchone()
 
-        if user:
+        password_matches = check_password_hash(user[1], password)
+
+        if user and password_matches:
             session["username"] = username
             session["user_id"] = user[0]
 
