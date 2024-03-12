@@ -36,37 +36,12 @@ def hash_value(string):
 
 @tweeter.route("/users", methods=["POST"])
 def create_user():
-    body = request.get_json()
-
-    username = body["username"]
-    password = hash_value(body["password"])
-
-    insert_query = text(
-        """
-        INSERT INTO users(username, picture, password)
-        VALUES (:username, '', :password)
-        """
-    )
-
-    with engine.connect() as connection:
-        connection.execute(insert_query, username=username, password=password)
-
-        return jsonify({"message": "user created"}), 201
+    pass
 
 
 @tweeter.route("/users")
 def users():
-    users_query = text(
-        """
-        SELECT username, picture
-        FROM users
-        """
-    )
-
-    with engine.connect() as connection:
-        users = connection.execute(users_query).fetchall()
-
-        return jsonify([dict(user) for user in users])
+    pass
 
 
 @tweeter.route("/users/<username>/tweets")
