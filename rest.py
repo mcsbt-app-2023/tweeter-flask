@@ -36,7 +36,25 @@ def hash_value(string):
 
 @tweeter.route("/users", methods=["POST"])
 def create_user():
-    pass
+    body = request.get_json()
+
+    username = body["username"]
+    password = hash_value(body["password"])
+
+    insert_user_query = text(
+        """
+        INSERT INTO users(username, password, picture)
+        VALUES(:username, :password, '')
+        """
+    )
+
+    with engine.connect() as connection:
+        try:
+            connection.execute(insert_user_query, username=username, password=password)
+
+            return jsonify({"message": "user created"}), 201
+        except:
+            return jsonify({"message": "user creation faild"}), 401
 
 
 @tweeter.route("/users")
